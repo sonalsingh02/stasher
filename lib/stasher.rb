@@ -40,7 +40,6 @@ module Stasher
 
     def self.add_custom_fields(&block)
       ActionController::Metal.send(:define_method, :stasher_add_custom_fields_to_scope, &block)
-      ActionController::Base.send(:define_method, :stasher_add_custom_fields_to_scope, &block)
     end
 
     def self.setup(app)
@@ -49,8 +48,8 @@ module Stasher
 
       # Path instrumentation class to insert our hook
       require 'stasher/rails_ext/action_controller/metal/instrumentation'
-      require 'logstash/event'
-      self.suppress_app_logs(app)
+      require 'logstash/event'      
+      self.suppress_app_logs(app) if app.config.stasher.suppress_app_log
 
       app.config.stasher.attach_to.each do |target|
         Stasher::RequestLogSubscriber.attach_to target
@@ -58,16 +57,14 @@ module Stasher
 
       self.logger = app.config.stasher.logger || Logger.new("#{Rails.root}/log/logstash_#{Rails.env}.log")
 
-      level = ::Logger.const_get(app.config.stasher.log_level.to_s.upcase)
+      level = ::Logger.const_get(app.config.stasher.log_level.to_s.upcase) if app.config.stasher.log_level
       self.logger.level = level || Logger::WARN
       self.enabled = true
     end
 
-    def self.suppress_app_logs(app)
-      if app.config.stasher.suppress_app_log
-        require 'stasher/rails_ext/rack/logger'
-        Stasher.remove_existing_log_subscriptions
-      end
+    def self.suppress_app_logs(app)   
+      require 'stasher/rails_ext/rack/logger'
+      Stasher.remove_existing_log_subscriptions
     end
 
     def self.format_exception(type_name, message, backtrace)

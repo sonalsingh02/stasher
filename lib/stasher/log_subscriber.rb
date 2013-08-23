@@ -8,10 +8,9 @@ module Stasher
       payload = ev.payload
 
       data      = extract_request(payload)
-      data.merge! CurrentScope.fields
+      data.merge! extract_current_scope
 
-      event = LogStash::Event.new('@fields' => data, '@tags' => ['request'], '@source' => Stasher.source)
-      Stasher.logger << event.to_json + "\n"      
+      log_event 'request', data
     end
 
     def process_action(ev)
@@ -22,11 +21,11 @@ module Stasher
       data.merge! runtimes(ev)
       data.merge! location(ev)
       data.merge! extract_exception(payload)
-      data.merge! CurrentScope.fields
+      data.merge! extract_current_scope
 
-      event = LogStash::Event.new('@fields' => data, '@tags' => ['response'], '@source' => Stasher.source)
-      event.tags << 'exception' if payload[:exception]
-      Stasher.logger << event.to_json + "\n"
+      log_event 'response', data do |event|
+        event.tags << 'exception' if payload[:exception]
+      end
 
       # Clear the scope at the end of the request
       Stasher::CurrentScope.clear!
@@ -41,10 +40,9 @@ module Stasher
 
       data      = extract_sql(payload)
       data.merge! runtimes(ev)
-      data.merge! CurrentScope.fields
+      data.merge! extract_current_scope
 
-      event = LogStash::Event.new('@fields' => data, '@tags' => ['sql'], '@source' => Stasher.source)
-      Stasher.logger << event.to_json + "\n"
+      log_event 'sql', data
     end
 
     def redirect_to(ev)
@@ -52,6 +50,12 @@ module Stasher
     end
 
     private
+
+    def log_event(type, data)
+      event = LogStash::Event.new('@fields' => data, '@tags' => [type], '@source' => Stasher.source)
+      yield(event) if block_given?
+      Stasher.logger << event.to_json + "\n"
+    end
 
     def extract_sql(payload)
       binds = ""
@@ -85,7 +89,7 @@ module Stasher
     end
 
     def extract_parms(payload)
-      payload[:params].except(*ActionController::LogSubscriber::INTERNAL_PARAMS)
+      payload[:params].except(*ActionController::LogSubscriber::INTERNAL_PARAMS) if payload.include?(:params)
     end
 
     def extract_path(payload)
@@ -126,6 +130,10 @@ module Stasher
       else
         {}
       end
+    end
+
+    def extract_current_scope
+      CurrentScope.fields
     end
 
     # Monkey patching to enable exception logging

@@ -32,14 +32,16 @@ After **stasher**:
 {"@source":"rails://localhost/my-app","@tags":["request"],"@fields":{"method":"GET","path":"/login","format":"html","controller":"sessions"
 ,"action":"login","ip":"127.0.0.1",params:{},"uuid":"e81ecd178ed3b591099f4d489760dfb6","user":"shadab_ahmed@abc.com",
 "site":"internal"},"@timestamp":"2013-04-30T13:00:46.354500+00:00"}
-{"@source":"rails://localhost/my-app","@tags":["sql"],"@fields":{"name":"Banner Load","sql":"SELECT `banners`.* FROM `banners` WHERE `banner`.`active` = 1 ORDER BY created_at DESC"},"@timestamp":"2013-04-30T13:00:46.362300+00:00"}
-{"@source":"rails://localhost/my-app","@tags":["log","debug"],"@fields":{"severity":"DEBUG"},"@message":"Found 3 banners to display on the login page","@timestamp":"2013-04-30T13:00:46.353400+00:00"}
+{"@source":"rails://localhost/my-app","@tags":["sql"],"@fields":{"name":"Banner Load","sql":"SELECT `banners`.* FROM `banners` WHERE `banner`.`active` = 1 ORDER BY created_at DESC","uuid":"e81ecd178ed3b591099f4d489760dfb6"},"@timestamp":"2013-04-30T13:00:46.362300+00:00"}
+{"@source":"rails://localhost/my-app","@tags":["log","debug"],"@fields":{"severity":"DEBUG","uuid":"e81ecd178ed3b591099f4d489760dfb6"},"@message":"Found 3 banners to display on the login page","@timestamp":"2013-04-30T13:00:46.353400+00:00"}
 {"@source":"rails://localhost/my-app","@tags":["response"],"@fields":{"method":"GET","path":"/login","format":"html","controller":"sessions"
 ,"action":"login","status":200,"duration":28.34,"view":25.96,"db":0.88,"ip":"127.0.0.1","uuid":"e81ecd178ed3b591099f4d489760dfb6","user":"shadab_ahmed@abc.com",
 "site":"internal"},"@timestamp":"2013-04-30T13:00:46.354500+00:00"}
 ```
 
 By default, the older format rails request logs are disabled, though you can enable them.
+
+All events logged within a Rack request will include the request's UUID, allowing you to follow individual requests through the logs.
 
 ## Installation
 

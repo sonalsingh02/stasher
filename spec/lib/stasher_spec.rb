@@ -43,49 +43,96 @@ describe Stasher do
     end
   end
 
-  describe '.append_custom_params' do
+  describe '.add_custom_fields' do
     let(:block) { ->{} }
-    it 'defines a method in ActionController::Base' do
-      ActionController::Base.should_receive(:send).with(:define_method, :stasher_add_custom_fields_to_scope, &block)
+
+    it 'defines a method in ActionController::Metal' do
+      ActionController::Metal.should_receive(:send).with(:define_method, :stasher_add_custom_fields_to_scope, &block)
       Stasher.add_custom_fields(&block)
     end
   end
 
   describe '.setup' do
     let(:logger) { double }
-    let(:stasher_config) { double(:logger => logger, :log_level => 'warn', attach_to: [:active_record] ) }
+    let(:stasher_config) { double(:logger => logger, :attach_to => [:active_record], :log_level => nil, :suppress_app_log => nil ) }
     let(:config) { double(:stasher => stasher_config) }
     let(:app) { double(:config => config) }
-    before do
+    
+    before :each do
+      logger.stub(:level=)
       config.stub(:action_dispatch => double(:rack_cache => false))
     end
-    it 'defines a method in ActionController::Base' do
-      Stasher.should_receive(:require).with('socket')
-      Stasher.should_receive(:require).with('stasher/rails_ext/action_controller/metal/instrumentation')
-      Stasher.should_receive(:require).with('logstash/event')
-      Stasher.should_receive(:suppress_app_logs).with(app)
+
+    context "when suppress_app_log is true" do
+      before :each do
+        stasher_config.stub(:suppress_app_log).and_return(true)
+      end
+
+      it 'suppresses the default logger' do
+        Stasher.should_receive(:suppress_app_logs).with(app)
+        Stasher.setup(app)
+      end
+    end
+
+    context "when suppress_app_log is false" do
+      before :each do
+        stasher_config.stub(:suppress_app_log).and_return(false)
+      end
+
+      it 'does not suppress the default logger' do
+        Stasher.should_not_receive(:suppress_app_logs).with(app)
+
+        Stasher.setup(app)
+      end
+    end
+
+    it "attaches to the requested notifiers" do
       Stasher::RequestLogSubscriber.should_receive(:attach_to).with(:active_record)
-      logger.should_receive(:level=).with(::Logger::WARN)
+  
+      Stasher.setup(app)
+    end
+
+    context "when a log level is configured" do
+      before :each do
+        stasher_config.stub(:log_level).and_return(:debug)
+      end
+
+      it "sets the configured log level" do
+        logger.should_receive(:level=).with(::Logger::DEBUG)
+
+        Stasher.setup(app)
+      end
+    end
+
+    context "when a log level is not configured" do
+      it "defaults to WARN" do
+        logger.should_receive(:level=).with(::Logger::WARN)
+
+        Stasher.setup(app)
+      end
+    end
+
+    it "sets itself as enabled" do
       Stasher.setup(app)
       Stasher.enabled.should be_true
     end
+
+    it "sets its source" do
+      Stasher.stub(:hostname).and_return('hostname')
+
+      Stasher.setup(app)
+      Stasher.source.should == "rails://hostname/r_spec/mocks"
+    end    
   end
 
   describe '.suppress_app_logs' do
-    let(:stasher_config){ double(:stasher => double(:suppress_app_log => true))}
+    let(:stasher_config){ double(:stasher => double.as_null_object)}
     let(:app){ double(:config => stasher_config)}
-    it 'removes existing subscriptions if enabled' do
+
+    it 'removes existing subscriptions' do
       Stasher.should_receive(:require).with('stasher/rails_ext/rack/logger')
       Stasher.should_receive(:remove_existing_log_subscriptions)
       Stasher.suppress_app_logs(app)
-    end
-
-    context 'when disabled' do
-      let(:stasher_config){ double(:stasher => double(:suppress_app_log => false)) }
-      it 'does not remove existing subscription' do
-        Stasher.should_not_receive(:remove_existing_log_subscriptions)
-        Stasher.suppress_app_logs(app)
-      end
     end
   end
 
@@ -106,25 +153,84 @@ describe Stasher do
   end
 
   describe '.log' do
-    let(:logger) { double() }
+    let(:logger) { MockLogger.new }
     
     before :each do
       Stasher.logger = logger
       Stasher.source = "source"
       LogStash::Time.stub(:now => 'timestamp')
-      Stasher::CurrentScope.fields = { :field => "value" }
     end
 
-    it 'adds to log with specified level' do
+    it 'ensures the log is configured to log at the given level' do
       logger.should_receive(:send).with('warn?').and_return(true)
-      logger.should_receive(:<<).with("{\"@source\":\"source\",\"@tags\":[\"log\",\"warn\"],\"@fields\":{\"severity\":\"WARN\",\"field\":\"value\"},\"@message\":\"WARNING\",\"@timestamp\":\"timestamp\"}\n")
       Stasher.log('warn', 'WARNING')
     end
 
-    it 'includes the current scope fields' do
+    it "does not log if the log level is higher than the severity" do      
+      expect {
+        Stasher.log('debug', 'DEBUG')        
+      }.not_to change{logger.messages.size}
+    end
 
-
+    it 'adds to log with specified level' do     
       Stasher.log('warn', 'WARNING')
+
+      logger.messages.first.should include '"@fields":{"severity":"WARN"}'
+    end
+
+    it "adds the 'log' tag" do
+      Stasher.log('warn', 'WARNING')
+      logger.messages.first.should match %r|"@tags":\[[^\[]*"log"[^\]]*\]|
+    end
+
+    it "adds a tag indicating the severity" do
+      Stasher.log('warn', 'WARNING')
+      logger.messages.first.should match %r|"@tags":\[[^\[]*"warn"[^\]]*\]|
+    end
+
+    it "logs the message to @message" do
+      Stasher.log('warn', "MESSAGE")
+      logger.messages.first.should include '"@message":"MESSAGE"'
+    end
+
+    it "logs the source to @source" do
+      Stasher.log('warn', "MESSAGE")
+      logger.messages.first.should include '"@source":"source"'
+    end
+
+    it "strips out ANSI color sequences" do
+      Stasher.log('warn', "\e[7;1mHELLO\e[0m WORLD")
+      logger.messages.first.should include '"@message":"HELLO WORLD"'
+    end
+
+    context "with fields in the current scope" do      
+      before :each do
+        Stasher::CurrentScope.fields = { :field => "value" }
+      end
+
+      it 'includes the current scope fields' do
+        Stasher.log('warn', 'WARNING')
+        
+        logger.messages.first.should match %r|"@fields":{[^}]*"field":"value"[^}]*}|
+      end
+    end
+
+    context "when logging an Exception" do
+      let(:exception) { Exception.new("Message") }
+
+      before :each do
+        exception.set_backtrace ["first", "second"]
+      end
+
+      it "logs the exception details" do
+        Stasher.log('error', exception)
+        logger.messages.first.should match %r|"exception":{"name":"Exception","message":"Message","backtrace":"first\\nsecond"}|
+      end
+
+      it "adds the 'exception' tag" do
+        Stasher.log('error', exception)
+        logger.messages.first.should match %r|\"@tags\":\[[^\[]*\"exception\"[^\]]*\]|
+      end
     end
   end
 
