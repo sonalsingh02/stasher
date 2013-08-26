@@ -13,12 +13,6 @@ module Stasher
     end
 
     ##
-    # Gets the names of the fields in the current scope
-    def self.field_names
-      Thread.current[:stasher_fields].keys
-    end
-
-    ##
     # Clears the current scope
     def self.clear!
       Thread.current[:stasher_fields] = nil

@@ -6,6 +6,7 @@ FactoryGirl.define do
     format 'application/json'
     method 'GET'
     path '/home?foo=bar'
+    ip "127.0.0.1"
     params { {:controller => 'home', :action => 'index', 'foo' => 'bar' }.with_indifferent_access }
     db_runtime 0.02
     view_runtime 0.01
@@ -17,7 +18,6 @@ FactoryGirl.define do
     skip_create
 
     sql "SELECT * FROM `users` WHERE `users`.`id` = 5"
-    binds []
     name 'User Load'
     
     initialize_with { attributes }

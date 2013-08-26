@@ -10,7 +10,7 @@ Gem::Specification.new do |spec|
   spec.email         = ["cdmicacc@gmail.com"]
   spec.description   = %q{Send Rails log messages to logstash}
   spec.summary       = %q{Send Rails log messages to logstash}
-  spec.homepage      = ""
+  spec.homepage      = "https://github.com/cdmicacc/stasher"
   spec.license       = "MIT"
 
   spec.files         = `git ls-files`.split($/)

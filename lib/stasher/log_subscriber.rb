@@ -2,7 +2,7 @@ require 'active_support/core_ext/class/attribute'
 require 'active_support/log_subscriber'
 
 module Stasher
-  class RequestLogSubscriber < ActiveSupport::LogSubscriber
+  class LogSubscriber < ActiveSupport::LogSubscriber
     def start_processing(ev)
       # Initialize the scope at the start of the request
       payload = ev.payload
@@ -19,7 +19,6 @@ module Stasher
       data      = extract_request(payload)
       data.merge! extract_status(payload)
       data.merge! runtimes(ev)
-      data.merge! location(ev)
       data.merge! extract_exception(payload)
       data.merge! extract_current_scope
 
@@ -46,7 +45,7 @@ module Stasher
     end
 
     def redirect_to(ev)
-      Thread.current[:logstasher_location] = ev.payload[:location]
+      Stasher::CurrentScope.fields[:location] = ev.payload[:location]
     end
 
     private
@@ -58,21 +57,9 @@ module Stasher
     end
 
     def extract_sql(payload)
-      binds = ""
-      unless (payload[:binds] || []).empty?
-        binds = "  " + payload[:binds].map { |col,v|
-          if col
-            [col.name, v]
-          else
-            [nil, v]
-          end
-        }.inspect
-      end
-
       {
         :name => payload[:name],
         :sql => payload[:sql].squeeze(' '),
-        :binds => binds
       }
     end
 
@@ -120,15 +107,6 @@ module Stasher
       }.inject({}) do |runtimes, (name, runtime)|
         runtimes[name] = runtime.to_f.round(2) if runtime
         runtimes
-      end
-    end
-
-    def location(event)
-      if location = Thread.current[:logstasher_location]
-        Thread.current[:logstasher_location] = nil
-        { :location => location }
-      else
-        {}
       end
     end
 

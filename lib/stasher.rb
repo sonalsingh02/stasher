@@ -52,7 +52,7 @@ module Stasher
       self.suppress_app_logs(app) if app.config.stasher.suppress_app_log
 
       app.config.stasher.attach_to.each do |target|
-        Stasher::RequestLogSubscriber.attach_to target
+        Stasher::LogSubscriber.attach_to target
       end
 
       self.logger = app.config.stasher.logger || Logger.new("#{Rails.root}/log/logstash_#{Rails.env}.log")
@@ -65,6 +65,9 @@ module Stasher
     def self.suppress_app_logs(app)   
       require 'stasher/rails_ext/rack/logger'
       Stasher.remove_existing_log_subscriptions
+      
+      # Disable ANSI colorization
+      app.config.colorize_logging = false
     end
 
     def self.format_exception(type_name, message, backtrace)

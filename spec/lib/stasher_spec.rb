@@ -87,7 +87,7 @@ describe Stasher do
     end
 
     it "attaches to the requested notifiers" do
-      Stasher::RequestLogSubscriber.should_receive(:attach_to).with(:active_record)
+      Stasher::LogSubscriber.should_receive(:attach_to).with(:active_record)
   
       Stasher.setup(app)
     end
@@ -126,7 +126,7 @@ describe Stasher do
   end
 
   describe '.suppress_app_logs' do
-    let(:stasher_config){ double(:stasher => double.as_null_object)}
+    let(:stasher_config){ double(:stasher => double.as_null_object).as_null_object }
     let(:app){ double(:config => stasher_config)}
 
     it 'removes existing subscriptions' do

@@ -13,9 +13,6 @@ module Stasher
     initializer 'stasher' do |app|
       Stasher.setup(app) if app.config.stasher.enabled
       Rails.logger = Stasher::Logger.new  if app.config.stasher.redirect_logger
-
-      # Disable ANSI colorization
-      app.config.colorize_logging = false
     end
   end
 end
