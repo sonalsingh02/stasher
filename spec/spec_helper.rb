@@ -46,6 +46,8 @@ require 'abstract_controller/base'
 require 'logger'
 require 'logstash-event'
 
+FactoryGirl.find_definitions
+
 Dir[File.expand_path("spec/support/**/*.rb")].each {|f| require f}
 
 RSpec.configure do |config|
@@ -53,4 +55,10 @@ RSpec.configure do |config|
   config.run_all_when_everything_filtered = true
   config.filter_run :focus
   config.order = 'random'
+
+  config.before :each do
+    # Clear the current scope object, if it's set
+    Stasher::CurrentScope.clear!
+  end
+
 end

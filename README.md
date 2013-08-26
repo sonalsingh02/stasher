@@ -2,11 +2,12 @@
 
 This gem is a heavy modification of [Logstasher](https://github.com/shadabahmed/logstasher), which was 
 inspired from [LogRage](https://github.com/roidrage/lograge).  It adds the same request logging for logstash as
-Logstasher, but also includes a modified Ruby Logger instance to allow you to send all of your logging to logstash.
+Logstasher, but separates out request and response log entries, and adds a modified Ruby Logger instance to allow
+you to send all of your logging to logstash.
 
 ## About stasher
 
-This gem This gem logs to a separate log file named `logstash_<environment>.log`.  It provides two facilities:
+This gem logs to a separate log file named `logstash_<environment>.log`.  It provides two facilities:
  * Request and response logging (ala Logstasher and LogRage)
  * Redirection of the Rails logger, with request-scoped parameters
 
@@ -56,7 +57,7 @@ In your Gemfile:
     config.stasher.log_level = :debug
 
     # This line is optional if you do not want to suppress app logs in your <environment>.log
-    config.stasher.suppress_app_log = false
+    # config.stasher.suppress_app_log = false
 
     # This line causes the Rails logger to be redirected to logstash as well
     config.stasher.redirect_logger = true

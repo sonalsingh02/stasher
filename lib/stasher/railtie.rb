@@ -6,6 +6,7 @@ module Stasher
   class Railtie < Rails::Railtie
     config.stasher = ActiveSupport::OrderedOptions.new
     config.stasher.enabled = false
+    config.stasher.suppress_app_log = true
     config.stasher.redirect_logger = false
     config.stasher.attach_to = [ :action_controller, :active_record]
 
