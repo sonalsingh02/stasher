@@ -12,7 +12,6 @@ module Stasher
 
     initializer 'stasher' do |app|
       Stasher.setup(app) if app.config.stasher.enabled
-      Rails.logger = Stasher::Logger.new  if app.config.stasher.redirect_logger
     end
   end
 end

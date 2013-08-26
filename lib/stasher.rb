@@ -44,28 +44,35 @@ module Stasher
 
     def self.setup(app)
       app.config.action_dispatch.rack_cache[:verbose] = false if app.config.action_dispatch.rack_cache
+
+      # Compose source
       self.source = "rails://#{hostname}/#{app.class.name.deconstantize.underscore}"
 
-      # Path instrumentation class to insert our hook
+      # Initialize & set up instrumentation
       require 'stasher/rails_ext/action_controller/metal/instrumentation'
       require 'logstash/event'      
       self.suppress_app_logs(app) if app.config.stasher.suppress_app_log
 
+      # Redirect Rails' logger if requested
+      Rails.logger = Stasher::Logger.new  if app.config.stasher.redirect_logger
+
+      # Subscribe to configured events
       app.config.stasher.attach_to.each do |target|
         Stasher::LogSubscriber.attach_to target
       end
 
+      # Initialize internal logger
       self.logger = app.config.stasher.logger || Logger.new("#{Rails.root}/log/logstash_#{Rails.env}.log")
-
       level = ::Logger.const_get(app.config.stasher.log_level.to_s.upcase) if app.config.stasher.log_level
       self.logger.level = level || Logger::WARN
+
       self.enabled = true
     end
 
     def self.suppress_app_logs(app)   
       require 'stasher/rails_ext/rack/logger'
       Stasher.remove_existing_log_subscriptions
-      
+
       # Disable ANSI colorization
       app.config.colorize_logging = false
     end

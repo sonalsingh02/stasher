@@ -54,7 +54,7 @@ describe Stasher do
 
   describe '.setup' do
     let(:logger) { double }
-    let(:stasher_config) { double(:logger => logger, :attach_to => [:active_record], :log_level => nil, :suppress_app_log => nil ) }
+    let(:stasher_config) { double(:logger => logger, :redirect_logger => true, :attach_to => [:active_record], :log_level => nil, :suppress_app_log => nil ) }
     let(:config) { double(:stasher => stasher_config) }
     let(:app) { double(:config => config) }
     
