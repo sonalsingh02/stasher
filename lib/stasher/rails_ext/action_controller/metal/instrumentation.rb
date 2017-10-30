@@ -22,6 +22,7 @@ module ActionController
       ActiveSupport::Notifications.instrument("process_action.action_controller", raw_payload) do |payload|
         result = super
         payload[:status] = response.status
+        payload[:response] = JSON.parse response.body
         append_info_to_payload(payload)
         result
       end

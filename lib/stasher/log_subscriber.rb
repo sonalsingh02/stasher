@@ -21,6 +21,7 @@ module Stasher
       data.merge! runtimes(ev)
       data.merge! extract_exception(payload)
       data.merge! extract_current_scope
+      data.merge! extract_response(payload)
 
       log_event 'response', data do |event|
         event.tags << 'exception' if payload[:exception]
@@ -73,6 +74,14 @@ module Stasher
         :controller => payload[:params]['controller'],
         :action => payload[:params]['action']
       }
+    end
+
+    def extract_response(payload)
+      if payload[:response]
+        { :response => payload[:response] }
+      else
+        { :response => '' }
+      end
     end
 
     def extract_parms(payload)
